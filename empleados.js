@@ -38,38 +38,64 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   async function cargarEmpleados() {
-    tabla.innerHTML = "";
-
+    // Limpieza controlada del tbody (sin innerHTML)
+    while (tabla.firstChild) {
+      tabla.removeChild(tabla.firstChild);
+    }
+  
+    // 🌀 Spinner temporal mientras carga
+    const loadingRow = document.createElement("tr");
+    loadingRow.innerHTML = `
+      <td colspan="6" class="text-center py-3">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+      </td>`;
+    tabla.appendChild(loadingRow);
+  
     try {
       const res = await fetch("obtener_empleados.php");
       const empleados = await res.json();
-
-      empleados.forEach((emp, index) => {
+  
+      // Eliminar spinner antes de mostrar resultados
+      while (tabla.firstChild) {
+        tabla.removeChild(tabla.firstChild);
+      }
+  
+      empleados.forEach(emp => {
         const tr = document.createElement("tr");
-
-        // 🎉 Animación con animate.css
-        tr.classList.add("animate__animated", "animate__fadeInUp");
-        tr.style.setProperty("--animate-duration", "0.5s");
-        tr.style.animationDelay = `${index * 0.1}s`;
-
+  
         tr.innerHTML = `
           <td>${emp.nombre}</td>
           <td>${emp.correo}</td>
           <td>${emp.puesto}</td>
           <td>${emp.fecha_ingreso}</td>
-          <td><img src="${emp.imagen}" alt="${emp.nombre}" width="60" onerror="this.src='fotos/default.jpg'"></td>
+          <td>
+            <img src="${emp.imagen}" alt="${emp.nombre}" width="60" loading="lazy" onerror="this.src='fotos/default.jpg'">
+          </td>
           <td>
             <button class="btn btn-sm btn-warning me-2" onclick='editarEmpleado(${JSON.stringify(emp)})'>✏️</button>
             <button class="btn btn-sm btn-danger" onclick='eliminarEmpleado(${emp.id})'>🗑️</button>
           </td>
         `;
-
+  
         tabla.appendChild(tr);
       });
+  
+      if (empleados.length === 0) {
+        const emptyRow = document.createElement("tr");
+        emptyRow.innerHTML = `<td colspan="6" class="text-center text-muted py-3">No hay empleados registrados.</td>`;
+        tabla.appendChild(emptyRow);
+      }
+  
     } catch (error) {
-      Swal.fire("Error", "No se pudieron cargar los empleados", "error");
+      tabla.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error al cargar empleados</td></tr>`;
+      console.error(error);
     }
   }
+  
+  
+  
 
   window.editarEmpleado = (emp) => {
     form.nombre.value = emp.nombre;
